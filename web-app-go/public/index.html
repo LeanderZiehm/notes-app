@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes</title>
+    <script defer src="https://umami.leanderziehm.com/script.js" data-website-id="9b2dc573-b4a1-44bf-8563-957e18cd296e"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background: #272822;
+            color: #f8f8f2;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .toolbar {
+            background: #3e3d32;
+            padding: 8px 10px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-bottom: 1px solid #49483e;
+        }
+
+        .toolbar button {
+            background: #49483e;
+            color: #f8f8f2;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+
+        .toolbar button:hover {
+            background: #5a5a47;
+        }
+
+        .tabs-container {
+            background: #49483e;
+            display: flex;
+            align-items: flex-end;
+            overflow-x: auto;
+            border-bottom: 1px solid #3e3d32;
+        }
+
+        .tab {
+            background: #3e3d32;
+            color: #a6a28c;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            border-top: 1px solid #49483e;
+            border-right: 1px solid #49483e;
+            border-left: 1px solid #49483e;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            max-width: 200px;
+        }
+
+        .tab:first-child {
+            border-left: none;
+        }
+
+        .tab.active {
+            background: #272822;
+            color: #f8f8f2;
+            border-bottom: 1px solid #272822;
+        }
+
+        .tab:hover:not(.active) {
+            background: #49483e;
+            color: #f8f8f2;
+        }
+
+        .tab-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tab-close {
+            color: #a6a28c;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 2px;
+            border-radius: 2px;
+        }
+
+        .tab-close:hover {
+            background: #5a5a47;
+            color: #f8f8f2;
+        }
+
+        .tab.modified .tab-name::after {
+            content: '●';
+            color: #f92672;
+            margin-left: 4px;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            background: #272822;
+        }
+
+        .line-numbers {
+            width: 60px;
+            background: #3e3d32;
+            border-right: 1px solid #49483e;
+            padding: 10px 5px;
+            font-size: 13px;
+            color: #90908a;
+            user-select: none;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .editor {
+            flex: 1;
+            padding: 10px;
+            font-size: 13px;
+            line-height: 1.5;
+            background: #272822;
+            color: #f8f8f2;
+            border: none;
+            outline: none;
+            resize: none;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            overflow-y: auto;
+            tab-size: 4;
+        }
+
+        .editor::selection {
+            background: #49483e;
+        }
+
+        .status-bar {
+            height: 22px;
+            background: #3e3d32;
+            color: #90908a;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 11px;
+            justify-content: space-between;
+            border-top: 1px solid #49483e;
+        }
+
+        .line-number {
+            display: block;
+            height: 19.5px;
+            line-height: 19.5px;
+            text-align: right;
+            padding-right: 10px;
+        }
+
+        .save-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #3e3d32;
+            border: 1px solid #49483e;
+            border-radius: 4px;
+            padding: 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .save-dialog input {
+            background: #272822;
+            color: #f8f8f2;
+            border: 1px solid #49483e;
+            padding: 8px 12px;
+            border-radius: 3px;
+            font-size: 12px;
+            width: 250px;
+            margin: 10px 0;
+        }
+
+        .save-dialog button {
+            background: #49483e;
+            color: #f8f8f2;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 0 5px;
+        }
+
+        .save-dialog button:hover {
+            background: #5a5a47;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <button onclick="newFile()">New File</button>
+            <button onclick="openFile()">Open</button>
+            <button onclick="saveCurrentFile()">Save</button>
+            <button onclick="saveAsFile()">Save As</button>
+        </div>
+        
+        <div class="tabs-container" id="tabsContainer">
+        </div>
+        
+        <div class="editor-container">
+            <div class="line-numbers" id="lineNumbers"></div>
+            <textarea class="editor" id="editor" placeholder="Start typing..." spellcheck="false"></textarea>
+        </div>
+        
+        <div class="status-bar">
+            <span id="statusLeft">Ready</span>
+            <span id="statusRight">Lines: 1 | Words: 0 | Characters: 0</span>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="save-dialog" id="saveDialog">
+        <h3 style="color: #f8f8f2; margin-bottom: 10px;">Save File</h3>
+        <input type="text" id="saveFilename" placeholder="Enter filename (without extension)">
+        <div style="margin-top: 15px;">
+            <button onclick="confirmSave()">Save</button>
+            <button onclick="cancelSave()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const lineNumbers = document.getElementById('lineNumbers');
+        const statusLeft = document.getElementById('statusLeft');
+        const statusRight = document.getElementById('statusRight');
+        const tabsContainer = document.getElementById('tabsContainer');
+        const overlay = document.getElementById('overlay');
+        const saveDialog = document.getElementById('saveDialog');
+        const saveFilename = document.getElementById('saveFilename');
+        
+        let files = [];
+        let currentFileIndex = 0;
+        let unnamedCounter = 1;
+        let autoSaveTimeout;
+
+        // File structure
+        function createNewFile(name = null, content = '') {
+            const fileName = name || `Untitled${unnamedCounter > 1 ? ' ' + unnamedCounter : ''}`;
+            if (!name) unnamedCounter++;
+            
+            return {
+                id: Date.now() + Math.random(),
+                name: fileName,
+                content: content,
+                modified: false,
+                saved: false
+            };
+        }
+
+        // Initialize editor
+        async function init() {
+            await loadFileList();
+            
+            // Create initial file if no files exist
+            if (files.length === 0) {
+                const newFile = createNewFile('1');
+                files.push(newFile);
+                currentFileIndex = 0;
+            }
+            
+            renderTabs();
+            loadCurrentFile();
+            setupEventListeners();
+            updateLineNumbers();
+            updateStatus();
+            editor.focus();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            editor.addEventListener('input', handleInput);
+            editor.addEventListener('scroll', syncScroll);
+            editor.addEventListener('keydown', handleKeyDown);
+            
+            // Save on page unload
+            window.addEventListener('beforeunload', (e) => {
+                const hasUnsaved = files.some(f => f.modified);
+                if (hasUnsaved) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                }
+            });
+        }
+
+        // Handle input changes
+        function handleInput() {
+            if (files[currentFileIndex]) {
+                files[currentFileIndex].content = editor.value;
+                files[currentFileIndex].modified = true;
+                renderTabs();
+                updateStatus();
+                scheduleAutoSave();
+            }
+        }
+
+        // Handle keyboard shortcuts
+        function handleKeyDown(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        saveCurrentFile();
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        newFile();
+                        break;
+                    case 'o':
+                        e.preventDefault();
+                        openFile();
+                        break;
+                    case 'w':
+                        e.preventDefault();
+                        closeCurrentFile();
+                        break;
+                }
+            }
+            
+            // Tab handling
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                const value = editor.value;
+                
+                if (e.shiftKey) {
+                    // Shift+Tab: Remove indentation
+                    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+                    const lineEnd = value.indexOf('\n', end);
+                    const selectedLines = value.substring(lineStart, lineEnd === -1 ? value.length : lineEnd);
+                    
+                    if (selectedLines.startsWith('    ')) {
+                        const newValue = value.substring(0, lineStart) + 
+                                       selectedLines.replace(/^    /, '') + 
+                                       value.substring(lineEnd === -1 ? value.length : lineEnd);
+                        editor.value = newValue;
+                        editor.setSelectionRange(start - 4, end - 4);
+                        handleInput();
+                    }
+                } else {
+                    // Tab: Add indentation
+                    editor.value = value.substring(0, start) + '    ' + value.substring(end);
+                    editor.setSelectionRange(start + 4, start + 4);
+                    handleInput();
+                }
+            }
+        }
+
+        // Load file list from server
+        async function loadFileList() {
+            try {
+                const response = await fetch('/api/files');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const serverFiles = await response.json();
+                
+                // Convert server files to our format
+                files = serverFiles.map(file => ({
+                    id: file.name, // Use name without extension as ID
+                    name: file.name,
+                    content: '',
+                    modified: false,
+                    saved: true
+                }));
+                
+                // Load content for each file
+                for (let file of files) {
+                    try {
+                        const contentResponse = await fetch(`/api/files/${file.name}`);
+                        if (contentResponse.ok) {
+                            const contentData = await contentResponse.json();
+                            file.content = contentData.content;
+                        }
+                    } catch (error) {
+                        console.error('Error loading file content:', error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading file list:', error);
+                files = [];
+            }
+        }
+
+        // Render tabs
+        function renderTabs() {
+            tabsContainer.innerHTML = '';
+            
+            files.forEach((file, index) => {
+                const tab = document.createElement('div');
+                tab.className = `tab ${index === currentFileIndex ? 'active' : ''} ${file.modified ? 'modified' : ''}`;
+                
+                tab.innerHTML = `
+                    <span class="tab-name">${file.name}</span>
+                    <span class="tab-close" onclick="closeFile(${index}, event)">×</span>
+                `;
+                
+                tab.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab-close')) return;
+                    switchToFile(index);
+                });
+                
+                tabsContainer.appendChild(tab);
+            });
+        }
+
+        // Switch to file
+        function switchToFile(index) {
+            if (index >= 0 && index < files.length) {
+                currentFileIndex = index;
+                loadCurrentFile();
+                renderTabs();
+            }
+        }
+
+        // Load current file content
+        function loadCurrentFile() {
+            if (files[currentFileIndex]) {
+                editor.value = files[currentFileIndex].content;
+                updateLineNumbers();
+                updateStatus();
+                editor.focus();
+            }
+        }
+
+        // New file
+        function newFile() {
+            const newFile = createNewFile();
+            files.push(newFile);
+            currentFileIndex = files.length - 1;
+            renderTabs();
+            loadCurrentFile();
+            setStatus('New file created');
+        }
+
+        // Open file
+        async function openFile() {
+            await loadFileList();
+            renderTabs();
+            if (files.length > 0 && currentFileIndex >= files.length) {
+                currentFileIndex = 0;
+            }
+            loadCurrentFile();
+        }
+
+        // Save current file
+        async function saveCurrentFile() {
+            if (!files[currentFileIndex]) return;
+            
+            const file = files[currentFileIndex];
+            
+            if (!file.saved) {
+                // Show save dialog for new files
+                showSaveDialog(file.name);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/files/${file.name}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content: file.content })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                file.modified = false;
+                file.saved = true;
+                renderTabs();
+                updateStatus();
+                setStatus('File saved successfully');
+            } catch (error) {
+                console.error('Error saving file:', error);
+                setStatus(`Error saving file: ${error.message}`);
+            }
+        }
+
+        // Save as file
+        function saveAsFile() {
+            if (!files[currentFileIndex]) return;
+            showSaveDialog(files[currentFileIndex].name);
+        }
+
+        // Show save dialog
+        function showSaveDialog(defaultName = '') {
+            saveFilename.value = defaultName;
+            overlay.style.display = 'block';
+            saveDialog.style.display = 'block';
+            saveFilename.focus();
+            saveFilename.select();
+        }
+
+        // Confirm save
+        async function confirmSave() {
+            const filename = saveFilename.value.trim();
+            if (!filename) {
+                alert('Please enter a filename');
+                return;
+            }
+            
+            const file = files[currentFileIndex];
+            if (!file) return;
+            
+            try {
+                const response = await fetch(`/api/files/${filename}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ content: file.content })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                file.name = filename;
+                file.modified = false;
+                file.saved = true;
+                file.id = filename;
+                
+                cancelSave();
+                renderTabs();
+                updateStatus();
+                setStatus('File saved successfully');
+            } catch (error) {
+                console.error('Error saving file:', error);
+                setStatus(`Error saving file: ${error.message}`);
+            }
+        }
+
+        // Cancel save
+        function cancelSave() {
+            overlay.style.display = 'none';
+            saveDialog.style.display = 'none';
+            editor.focus();
+        }
+
+        // Close file
+        function closeFile(index, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            
+            if (files[index] && files[index].modified) {
+                if (!confirm('File has unsaved changes. Close anyway?')) {
+                    return;
+                }
+            }
+            
+            files.splice(index, 1);
+            
+            if (files.length === 0) {
+                newFile();
+                return;
+            }
+            
+            if (currentFileIndex >= files.length) {
+                currentFileIndex = files.length - 1;
+            } else if (currentFileIndex > index) {
+                currentFileIndex--;
+            }
+            
+            renderTabs();
+            loadCurrentFile();
+        }
+
+        // Close current file
+        function closeCurrentFile() {
+            closeFile(currentFileIndex);
+        }
+
+        // Schedule auto-save
+        function scheduleAutoSave() {
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+            
+            const file = files[currentFileIndex];
+            if (file && file.saved) {
+                autoSaveTimeout = setTimeout(() => {
+                    saveCurrentFile();
+                }, 3000);
+            }
+        }
+
+        // Update line numbers
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n');
+            const lineCount = lines.length;
+            
+            lineNumbers.innerHTML = '';
+            for (let i = 1; i <= lineCount; i++) {
+                const lineNumber = document.createElement('div');
+                lineNumber.className = 'line-number';
+                lineNumber.textContent = i;
+                lineNumbers.appendChild(lineNumber);
+            }
+        }
+
+        // Sync scroll
+        function syncScroll() {
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+
+        // Update status
+        function updateStatus() {
+            const content = editor.value;
+            const lines = content.split('\n').length;
+            const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+            const chars = content.length;
+            
+            const currentFile = files[currentFileIndex];
+            const fileStatus = currentFile ? 
+                `${currentFile.name}${currentFile.modified ? ' (modified)' : ''}` : 
+                'No file';
+            
+            statusLeft.textContent = fileStatus;
+            statusRight.textContent = `Lines: ${lines} | Words: ${words} | Characters: ${chars}`;
+        }
+
+        // Set temporary status
+        function setStatus(message) {
+            const originalLeft = statusLeft.textContent;
+            statusLeft.textContent = message;
+            setTimeout(() => {
+                updateStatus();
+            }, 3000);
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

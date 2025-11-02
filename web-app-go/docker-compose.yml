@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  text-editor:
+    build: .
+    container_name: text-editor
+    ports:
+      - "5007:5007"
+    environment:
+      - PORT=5007
+    volumes:
+      - ./files:/app/files       # persist text files
+      - ./public:/app/public     # optional: serve custom HTML/JS
